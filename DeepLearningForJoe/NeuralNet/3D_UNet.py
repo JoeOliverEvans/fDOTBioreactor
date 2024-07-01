@@ -148,7 +148,7 @@ device = (
 print(f"Using {device} device")
 
 # data = sio.loadmat('../SimData/3D/images.mat')
-data = mat73.loadmat('../SimData/3D/images3.mat')
+data = mat73.loadmat(r'C:\Joe Evans\University\Computing\Summer Project\DeepLearningForJoe\SimulateData\images3.mat')
 training_X = torch.tensor(data['noisy_img'][:,:,:,:2048], dtype=torch.float32)
 training_Y = torch.tensor(data['clean_img'][:,:,:,:2048], dtype=torch.float32)
 validation_X = torch.tensor(data['noisy_img'][:,:,:,2048:2400], dtype=torch.float32)

@@ -1,17 +1,15 @@
-addpath(genpath('/home/jxe094/NIRFASTer'))
-addpath('JoeScipts')
 clear
 
 mesh = load_mesh('cylinder_large');
 
 %%
-samples = 2000;
+samples = 3; %number of images to generate
 mesh.muaf = zeros(size(mesh.muaf)); % no background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 10;
-blob_r_rng = [7,15];    % mm
+max_blobs = 5;
+blob_r_rng = [7,15];    % mm, blob radius
 % blob_muaf_rng = [3,7];   % times baseline
-blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
+blob_muaf_rng = [1e-3,1e-1];   % mm-1
 boundary = [min(mesh.nodes(:,1)), max(mesh.nodes(:,1)), min(mesh.nodes(:,2)), max(mesh.nodes(:,2)), min(mesh.nodes(:,3)), max(mesh.nodes(:,3))];
 radius = boundary(2);
 
@@ -42,22 +40,16 @@ for rep = 1:samples
     blob_y = nan;
     blob_z = nan;
     while 1
-        idx = true(num_blob, num_blob);
-        tmp = pdist2([blob_x, blob_y, blob_z], [blob_x, blob_y, blob_z]) > blob_r+blob_r'+2;
+        idx = true(num_blob, num_blob); % square matrix of ones with size num_blob
+        tmp = pdist2([blob_x, blob_y, blob_z], [blob_x, blob_y, blob_z]) > blob_r+blob_r'+2; % larger of euclidean distance between
         if all(blob_x.^2+blob_y.^2 < (blob_r-radius).^2) && (num_blob ==1 || all(tmp(tril(idx,-1))))
             break
         end
-        blob_x = rand(num_blob,1) * (boundary(2)-boundary(1)) + boundary(1);
+        blob_x = rand(num_blob,1) * (boundary(2)-boundary(1)) + boundary(1); %randomise centre of the blob
         blob_y = rand(num_blob,1) * (boundary(4)-boundary(3)) + boundary(3);
         blob_z = rand(num_blob,1) .* (boundary(6)-boundary(5)-blob_r-2) + (boundary(5)+blob_r);
     end
     
-    fluctuate = 0.1*(rand(2,1)-0.5); % fluctuate the background mua by +/-10%
-    mesh2.muax = mesh.muax*(1+fluctuate(1));
-    mesh2.muam = mesh2.muax;
-    mesh2.musx = mesh.musx*(1+fluctuate(2));
-    mesh2.musm = mesh2.musx;
-
     for i=1:num_blob
         blob=[];
         blob.x = blob_x(i);
@@ -65,11 +57,14 @@ for rep = 1:samples
         blob.z = blob_z(i);
         blob.r = blob_r(i);
         blob.muaf = blob_muaf(i);
-        mesh2 = add_blob(mesh2, blob);
+        mesh2 = add_blob(mesh2, blob); % where the mesh is edited to include the new blob, this is what needs to change for different shapes
     end
-    mesh2.kappax = 1./(3*(mesh2.muax + mesh2.musx));
-    mesh2.kappam = 1./(3*(mesh2.muam + mesh2.musm));
-
+    fluctuate = 0.1*(rand(2,1)-0.5); % fluctuate the background mua by +/-10%
+    mesh2.muax = mesh.muax*(1+fluctuate(1));
+    mesh2.muam = mesh2.muax;
+    mesh2.musx = mesh.musx*(1+fluctuate(2));
+    mesh2.musm = mesh2.musx;
+    
     try
         data = femdata_fl(mesh2, 0, solver,opt);
     catch
@@ -124,4 +119,8 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs10', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+% save('images3', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise')
+% [warnMsg, warnId] = lastwarn();
+% if(~isempty(warnId))
+    save('images3', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+% end
