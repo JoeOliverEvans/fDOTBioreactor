@@ -1,7 +1,7 @@
 clear
 %load('test_processed.mat')
 % load('../SimData/3D/images3.mat')
-load('../SimulateData/images3.mat')
+load('../SimulateData/images3_gaussian.mat')
 load('bnd.mat')
 
 recon1 = noisy_img(:,:,:,1:end);
@@ -13,7 +13,7 @@ cmap = hot(128); % colormap
 thresh = 1; % Since our data is normalized, this effectively says we only care about voxels above one standard deviation
 
 %%%% Change this to something you need
-tmp=truth(:,:,:,2);
+tmp=truth(:,:,:,1);
 %%%%
 
 tmp(tmp<thresh) = 0;
