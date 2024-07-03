@@ -1,11 +1,12 @@
 addpath(genpath('/home/jxe094/NIRFASTer'))
 addpath('JoeScipts')
+addpath(genpath('../OptionalPatches'))
 clear
 
 mesh = load_mesh('cylinder_large');
 
 %%
-samples = 2000;
+samples = 500;
 mesh.muaf = zeros(size(mesh.muaf)); % no background fluorescence
 num_nodes = size(mesh.nodes, 1);
 max_blobs = 10;
@@ -125,3 +126,4 @@ mask=zeros(48,48,56);
 mask(inmesh)=1;
 
 save('images3_blobs10', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+clear

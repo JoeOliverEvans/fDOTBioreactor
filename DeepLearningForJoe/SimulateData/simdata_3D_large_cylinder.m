@@ -136,3 +136,4 @@ mask(inmesh)=1;
 % if(~isempty(warnId))
     save('images3', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
 % end
+clear
