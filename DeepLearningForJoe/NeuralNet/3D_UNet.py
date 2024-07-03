@@ -8,29 +8,31 @@ from torch.nn.functional import relu
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import re
+
 
 class UNet(nn.Module):
     def __init__(self):
         super().__init__()
         # Encoder
         # input: 48*48*56*1
-        self.e11 = nn.Conv3d(1, 16, kernel_size=3, padding='same') 
-        self.e12 = nn.Conv3d(16, 16, kernel_size=3, padding='same') 
-        self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2) 
+        self.e11 = nn.Conv3d(1, 16, kernel_size=3, padding='same')
+        self.e12 = nn.Conv3d(16, 16, kernel_size=3, padding='same')
+        self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
 
         # input: 24*24*28*16
-        self.e21 = nn.Conv3d(16, 32, kernel_size=3, padding='same') 
-        self.e22 = nn.Conv3d(32, 32, kernel_size=3, padding='same') 
-        self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2) 
+        self.e21 = nn.Conv3d(16, 32, kernel_size=3, padding='same')
+        self.e22 = nn.Conv3d(32, 32, kernel_size=3, padding='same')
+        self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
 
         # input: 12*12*14*32
-        self.e31 = nn.Conv3d(32, 64, kernel_size=3, padding='same') 
-        self.e32 = nn.Conv3d(64, 64, kernel_size=3, padding='same') 
-        self.pool3 = nn.MaxPool3d(kernel_size=2, stride=2) 
+        self.e31 = nn.Conv3d(32, 64, kernel_size=3, padding='same')
+        self.e32 = nn.Conv3d(64, 64, kernel_size=3, padding='same')
+        self.pool3 = nn.MaxPool3d(kernel_size=2, stride=2)
 
         # input: 6*6*7*64
         self.b1 = nn.Conv3d(64, 128, kernel_size=3, padding='same')
-        self.b2 = nn.Conv3d(128, 128, kernel_size=3, padding='same') 
+        self.b2 = nn.Conv3d(128, 128, kernel_size=3, padding='same')
 
         # Decoder
         self.upconv1 = nn.ConvTranspose3d(128, 64, kernel_size=2, stride=2)
@@ -47,7 +49,7 @@ class UNet(nn.Module):
 
         # Output layer
         self.outconv = nn.Conv3d(16, 1, kernel_size=1)
-        
+
     def forward(self, x):
         # Encoder
         xe11 = relu(self.e11(x))
@@ -64,7 +66,7 @@ class UNet(nn.Module):
 
         xb1 = relu(self.b1(xp3))
         xb2 = relu(self.b2(xb1))
-        
+
         # Decoder
         xu1 = self.upconv1(xb2)
         xu11 = torch.cat([xe32, xu1], dim=1)
@@ -83,76 +85,81 @@ class UNet(nn.Module):
 
         # Output layer
         out = self.outconv(xd32) + x
-        
+
         return out
+
 
 class mydata(Dataset):
     def __init__(self, X, Y, device):
         self.X = X
         self.Y = Y
         self.device = device
-        
+
     def __len__(self):
         return self.Y.shape[-1]
-    
+
     def __getitem__(self, idx):
-        return torch.unsqueeze(self.X[:,:,:,idx], 0).to(self.device), torch.unsqueeze(self.Y[:,:,:,idx], 0).to(self.device)
-    
+        return torch.unsqueeze(self.X[:, :, :, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, :, :, idx], 0).to(
+            self.device)
+
+
 def train_loop(dataloader, dataloader_test, model, mask, optimizer):
     size = len(dataloader.dataset)
     model.train()
-    for batch, (X,y) in enumerate(dataloader):
+    for batch, (X, y) in enumerate(dataloader):
         pred = model(X)
         # loss = loss_fn(pred, y)
         loss = torch.zeros(1)
         if torch.cuda.is_available():
-            loss=loss.to("cuda")
+            loss = loss.to("cuda")
         for i in range(y.shape[0]):
             for j in range(y.shape[1]):
-                tmp1 = torch.flatten(pred[i,j] * mask)
-                tmp2 = torch.flatten(y[i,j] * mask)
-                loss = loss.add(torch.sum((tmp1 - tmp2)**2))
-        
+                tmp1 = torch.flatten(pred[i, j] * mask)
+                tmp2 = torch.flatten(y[i, j] * mask)
+                loss = loss.add(torch.sum((tmp1 - tmp2) ** 2))
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        
+
         if batch % 10 == 0:
             loss, current = loss.item(), (batch + 1) * len(X)
             if np.isnan(loss):
                 break
             print(f"loss: {loss:>7f}  [{current:>4d}/{size:>4d}]")
-    
+
     test_loss = torch.zeros(1)
     if torch.cuda.is_available():
-        test_loss=test_loss.to("cuda")
-    for _, (X,y) in enumerate(dataloader_test):
+        test_loss = test_loss.to("cuda")
+    for _, (X, y) in enumerate(dataloader_test):
         pred = model(X)
         for i in range(y.shape[0]):
             for j in range(y.shape[1]):
-                tmp1 = torch.flatten(pred[i,j] * mask)
-                tmp2 = torch.flatten(y[i,j] * mask)
-                test_loss = test_loss.add(torch.sum((tmp1 - tmp2)**2))
-    
+                tmp1 = torch.flatten(pred[i, j] * mask)
+                tmp2 = torch.flatten(y[i, j] * mask)
+                test_loss = test_loss.add(torch.sum((tmp1 - tmp2) ** 2))
+
     test_loss = test_loss.item()
     print(f"test loss: {test_loss:>7f}")
-        
+
     return loss.item(), test_loss
-            
+
+
 device = (
     "cuda"
     if torch.cuda.is_available()
     else "cpu"
 )
-#device = ("cpu")
+# device = ("cpu")
 print(f"Using {device} device")
 
 # data = sio.loadmat('../SimData/3D/images.mat')
-data = mat73.loadmat(r'C:\Joe Evans\University\Computing\Summer Project\DeepLearningForJoe\SimulateData\images3.mat')
-training_X = torch.tensor(data['noisy_img'][:,:,:,:2048], dtype=torch.float32)
-training_Y = torch.tensor(data['clean_img'][:,:,:,:2048], dtype=torch.float32)
-validation_X = torch.tensor(data['noisy_img'][:,:,:,2048:2400], dtype=torch.float32)
-validation_Y = torch.tensor(data['clean_img'][:,:,:,2048:2400], dtype=torch.float32)
+data_string = r'Datasets/Gaussian/Gaussian_20_1/images3_gaussian2500.mat'
+data = mat73.loadmat(data_string)
+training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
+training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
+validation_X = torch.tensor(data['noisy_img'][:, :, :, 2048:2400], dtype=torch.float32)
+validation_Y = torch.tensor(data['clean_img'][:, :, :, 2048:2400], dtype=torch.float32)
 # inmesh = np.int16(data['inmesh'].squeeze())
 mask = torch.tensor(data['mask'], dtype=torch.float32).to(device)
 
@@ -176,24 +183,26 @@ for epoch in range(200):
     #     if np.all(np.array(all_testloss[-5:])>mintest):
     #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
     #         break
-    if epoch>5:
+    if epoch > 5:
         if np.all(np.diff(all_testloss)[-5:] >= 0):
             print('Test loss hasnt decreased for 5 consecutive epochs. Terminating.')
             break
 
-model=model.to('cpu')
+model = model.to('cpu')
 model.eval()
 
-torch.save(model, '3D_UNet_trained3')
-sio.savemat('loss_3D_UNet3.mat',{'training_loss':all_loss, 'testing_loss':all_testloss})
+path_root_string = re.search('.*(?=\/)', data_string).string + '/'
+model_path = path_root_string + '3D_UNet_trained3'
+torch.save(model, model_path)
+sio.savemat(path_root_string + 'loss_3D_UNet3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
 
-#%%
+# %%
 # Now process the test set
-model=torch.load('3D_UNet_trained3')
-test_X = torch.tensor(data['noisy_img'][:,:,:,2400:], dtype=torch.float32)
+model = torch.load(model_path)
+test_X = torch.tensor(data['noisy_img'][:, :, :, 2400:], dtype=torch.float32)
 test_Y = np.zeros(test_X.shape)
 for i in range(test_X.shape[-1]):
-    tmp = test_X[:,:,:,i]
-    test_Y[:,:,:,i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
-    
-sio.savemat('test_processed.mat', {'recon2':test_Y})
+    tmp = test_X[:, :, :, i]
+    test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
+
+sio.savemat(path_root_string + 'test_processed.mat', {'recon2': test_Y})
