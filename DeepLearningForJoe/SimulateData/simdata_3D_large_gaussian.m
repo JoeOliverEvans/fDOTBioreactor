@@ -1,12 +1,15 @@
+addpath(genpath('/home/jxe094/NIRFASTer'))
+addpath('JoeScipts')
+addpath(genpath('/home/jxe094/Work/DeepLearningForJoe/OptionalPatches'))
 clear
 
 mesh = load_mesh('cylinder_large');
 
 %%
-samples = 2;
+samples = 2500;
 mesh.muaf = zeros(size(mesh.muaf)); % no background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 100;
+max_blobs = 20;
 blob_r_rng = [7,15];    % mm
 % blob_muaf_rng = [3,7];   % times baseline
 blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
@@ -96,7 +99,7 @@ clean_img = reshape(all_muaf2,48,48,56,samples);
 
 [J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
 J = rmfield(J, 'completem');
-[~, invop] = tikhonov(J.complexm./data0.amplitudex,100);
+[~, invop] = tikhonov(J.complexm./data0.amplitudex,1);
 tmp = all_datafl_clean./all_datax_clean;
 maxamp = max(tmp);
 norm_noise = 0.02*rand(samples, 1);
@@ -120,4 +123,4 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_gaussian', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+save('images3_gaussian2500', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
