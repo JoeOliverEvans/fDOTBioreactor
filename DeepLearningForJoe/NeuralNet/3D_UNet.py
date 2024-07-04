@@ -154,7 +154,7 @@ device = (
 print(f"Using {device} device")
 
 # data = sio.loadmat('../SimData/3D/images.mat')
-data_string = r'Datasets/Gaussian/Gaussian_20_1/images3_gaussian2500.mat'
+data_string = r'Datasets/Gaussian/Gaussian_20_1/images3_gaussian2500nonan.mat'
 data = mat73.loadmat(data_string)
 training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
 training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
@@ -191,8 +191,8 @@ for epoch in range(200):
 model = model.to('cpu')
 model.eval()
 
-path_root_string = re.search('.*(?=\/)', data_string).string + '/'
-model_path = path_root_string + '3D_UNet_trained3'
+path_root_string = re.search('.*(?=\/)', data_string).group() + r'/'
+model_path = path_root_string + r'3D_UNet_trained3'
 torch.save(model, model_path)
 sio.savemat(path_root_string + 'loss_3D_UNet3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
 
@@ -205,4 +205,4 @@ for i in range(test_X.shape[-1]):
     tmp = test_X[:, :, :, i]
     test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
 
-sio.savemat(path_root_string + 'test_processed.mat', {'recon2': test_Y})
+sio.savemat(path_root_string + r'test_processed.mat', {'recon2': test_Y})
