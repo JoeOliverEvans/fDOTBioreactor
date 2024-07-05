@@ -50,46 +50,46 @@ end
 
 % dist = distance(mesh.nodes(:,1:3),ones(length(mesh.bndvtx),1),[gaussian.x gaussian.y gaussian.z]);
 dist = pdist2(mesh.nodes, [gaussian.x, gaussian.y, gaussian.z]);
+gaussian_coefficient = exp(-(dist).^2./(2*gaussian.sigma.^2));
+gaussian_coefficient(isnan(gaussian_coefficient)) = 0;
 
 if isfield(gaussian, 'muax') && isfield(gaussian, 'musx')
     kappax = 1./(3*(gaussian.muax+gaussian.musx));
-    mesh.kappax = mesh.kappax + kappax * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.kappax = mesh.kappax + kappax * gaussian_coefficient;
 end
 if isfield(gaussian, 'muam') && isfield(gaussian, 'musm')
     kappam = 1./(3*(gaussian.muam+gaussian.musm));
-    mesh.kappam = mesh.kappam + kappam * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.kappam = mesh.kappam + kappam * gaussian_coefficient;
 end
 if isfield(gaussian, 'muax')
-    mesh.muax = mesh.muax + gaussian.muax* exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.muax = mesh.muax + gaussian.muax* gaussian_coefficient;
 end
 if isfield(gaussian, 'musx')
-    mesh.musx = mesh.musx + gaussian.musx * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.musx = mesh.musx + gaussian.musx * gaussian_coefficient;
 end
 if isfield(gaussian, 'ri')
-    mesh.ri = mesh.ri + gaussian.ri * exp(-(dist).^2./(2*gaussian.sigma.^2));
-     mesh.c = mesh.c + (3e11/gaussian.ri) * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.ri = mesh.ri + gaussian.ri * gaussian_coefficient;
+     mesh.c = mesh.c + (3e11/gaussian.ri) * gaussian_coefficient;
 end
 if isfield(gaussian, 'muam')
-    mesh.muam = mesh.muam + gaussian.muam * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.muam = mesh.muam + gaussian.muam * gaussian_coefficient;
 end
 if isfield(gaussian, 'musm')
-    mesh.musm = mesh.musm + gaussian.musm * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.musm = mesh.musm + gaussian.musm * gaussian_coefficient;
 end
 if isfield(gaussian, 'muaf')
     % update excitation absorption if it isn't specified
     if ~isfield(gaussian, 'muax')
-        if max(mesh.muax) > 0
-            mesh.muax = mesh.muax + gaussian.muaf * exp(-(dist).^2./(2*gaussian.sigma.^2));
-        end
+        mesh.muax = mesh.muax + gaussian.muaf * gaussian_coefficient;
     end
     
-    mesh.muaf = mesh.muaf + gaussian.muaf * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.muaf = mesh.muaf + gaussian.muaf * gaussian_coefficient;
 end
 if isfield(gaussian, 'tau')
-    mesh.tau = mesh.tau + gaussian.tau * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.tau = mesh.tau + gaussian.tau * gaussian_coefficient;
 end
 if isfield(gaussian, 'eta')
-    mesh.eta = mesh.eta + gaussian.eta * exp(-(dist).^2./(2*gaussian.sigma.^2));
+    mesh.eta = mesh.eta + gaussian.eta * gaussian_coefficient;
 end
 
 
