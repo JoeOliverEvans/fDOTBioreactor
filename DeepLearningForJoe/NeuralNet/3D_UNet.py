@@ -179,7 +179,7 @@ for epoch in range(200):
     all_testloss.append(testloss)
     if testloss < mintest:
         mintest = testloss
-        patience = 5  # Reset patience counter
+        patience = 10  # Reset patience counter
     # if epoch>5:
     #     if np.all(np.array(all_testloss[-5:])>mintest):
     #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
