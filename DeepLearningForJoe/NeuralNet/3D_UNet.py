@@ -154,7 +154,7 @@ device = (
 print(f"Using {device} device")
 
 # data = sio.loadmat('../SimData/3D/images.mat')
-data_string = r'Datasets/Gaussian/Gaussian_20_1/images3_gaussian2500nonan.mat'
+data_string = r'Datasets/Gaussian/Gaussian_20_1/images3_gaussian2500.mat'
 data = mat73.loadmat(data_string)
 training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
 training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
@@ -179,13 +179,14 @@ for epoch in range(200):
     all_testloss.append(testloss)
     if testloss < mintest:
         mintest = testloss
+        patience = 5  # Reset patience counter
     # if epoch>5:
     #     if np.all(np.array(all_testloss[-5:])>mintest):
     #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
     #         break
-    if epoch > 5:
-        if np.all(np.diff(all_testloss)[-5:] >= 0):
-            print('Test loss hasnt decreased for 5 consecutive epochs. Terminating.')
+    else:
+        patience -= 1
+        if patience == 0:
             break
 
 model = model.to('cpu')
