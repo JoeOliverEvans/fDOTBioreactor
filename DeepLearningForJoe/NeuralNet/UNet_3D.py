@@ -154,7 +154,8 @@ device = (
 print(f"Using {device} device")
 
 # data = sio.loadmat('../SimData/3D/images.mat')
-data_string = r'Datasets/Gaussian/Gaussian_20_1/images3_gaussian2500.mat'
+data_string = r'Datasets/Gaussian/Gaussian_10/images3_gaussian10nonan.mat'
+print(data_string)
 data = mat73.loadmat(data_string)
 training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
 training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
