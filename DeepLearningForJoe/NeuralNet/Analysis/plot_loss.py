@@ -1,7 +1,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
-import mat73
 import scipy.io
+import re
+import mat73
 
 
 def plot_loss(data_string):
@@ -24,8 +25,9 @@ def plot_loss(data_string):
     ax2.set_ylabel('Testing Loss', color=colour2)
     ax2.tick_params(axis='y', labelcolor=colour2)
     fig.tight_layout()
+    plt.savefig(re.search(r'.*\\', str(file)).group() + 'loss_plot.pdf', bbox_inches='tight', format='pdf', dpi=300)
     plt.show()
 
 
-file = r'C:\Joe Evans\University\Computing\Summer Project\DeepLearningForJoe\NeuralNet\Datasets\Blob\Blob_10_1\loss_3D_UNet3.mat'
+file = r'C:\Joe Evans\University\Computing\Summer Project\DeepLearningForJoe\NeuralNet\Datasets\Gaussian\Gaussian_20_1\loss_3D_UNet3.mat'
 plot_loss(file)
