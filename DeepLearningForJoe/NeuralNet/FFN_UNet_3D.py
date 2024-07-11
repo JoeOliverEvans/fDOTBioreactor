@@ -9,30 +9,90 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import re
-from UNet_3D import UNet
-
-
-class FFN(nn.Module):
-    """ To replicate the classical reconstruction, generates image 1 quarter of the size due to parameter numbers"""
-    def __init__(self):
-        super(FFN, self).__init__()
-        self.fc1 = nn.Linear(2592*2, 12*12*14)  # Size of the input /4 in each dimension
-        self.upconvo1 = nn.ConvTranspose3d(1, 1, 4, 1)
-
-    def forward(self, x):
-        f1 = relu(self.fc1(x))
-        f1_reshaped = torch.reshape(f1, [12, 12, 14])
-        c1 = relu(self.upconvo1(f1_reshaped))
-        return c1
 
 
 class Net(nn.Module):
     def __init__(self):
-        super(Net, self).__init__()
-        self.seq = nn.Sequential(FFN(), UNet())
+        super().__init__()
+        self.fc1 = nn.Linear(2592*2, 12*12*14)  # Size of the input /4 in each dimension
+        self.upconvo1 = nn.ConvTranspose3d(1, 1, 4, 4)
 
-    def forward(self, inputx):
-        return self.seq(inputx)
+        # Encoder
+        # input: 48*48*56*1
+        self.e11 = nn.Conv3d(1, 16, kernel_size=3, padding='same')
+        self.e12 = nn.Conv3d(16, 16, kernel_size=3, padding='same')
+        self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
+
+        # input: 24*24*28*16
+        self.e21 = nn.Conv3d(16, 32, kernel_size=3, padding='same')
+        self.e22 = nn.Conv3d(32, 32, kernel_size=3, padding='same')
+        self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
+
+        # input: 12*12*14*32
+        self.e31 = nn.Conv3d(32, 64, kernel_size=3, padding='same')
+        self.e32 = nn.Conv3d(64, 64, kernel_size=3, padding='same')
+        self.pool3 = nn.MaxPool3d(kernel_size=2, stride=2)
+
+        # input: 6*6*7*64
+        self.b1 = nn.Conv3d(64, 128, kernel_size=3, padding='same')
+        self.b2 = nn.Conv3d(128, 128, kernel_size=3, padding='same')
+
+        # Decoder
+        self.upconv1 = nn.ConvTranspose3d(128, 64, kernel_size=2, stride=2)
+        self.d11 = nn.Conv3d(128, 64, kernel_size=3, padding='same')
+        self.d12 = nn.Conv3d(64, 64, kernel_size=3, padding='same')
+
+        self.upconv2 = nn.ConvTranspose3d(64, 32, kernel_size=2, stride=2)
+        self.d21 = nn.Conv3d(64, 32, kernel_size=3, padding='same')
+        self.d22 = nn.Conv3d(32, 32, kernel_size=3, padding='same')
+
+        self.upconv3 = nn.ConvTranspose3d(32, 16, kernel_size=2, stride=2)
+        self.d31 = nn.Conv3d(32, 16, kernel_size=3, padding='same')
+        self.d32 = nn.Conv3d(16, 16, kernel_size=3, padding='same')
+
+        # Output layer
+        self.outconv = nn.Conv3d(16, 1, kernel_size=1)
+
+    def forward(self, x):
+        f1 = relu(self.fc1(x))
+        f1_reshaped = f1.view(-1, 1, 12, 12, 14)
+        c1 = relu(self.upconvo1(f1_reshaped))
+        # Encoder
+        xe11 = relu(self.e11(c1))
+        xe12 = relu(self.e12(xe11))
+        xp1 = self.pool1(xe12)
+
+        xe21 = relu(self.e21(xp1))
+        xe22 = relu(self.e22(xe21))
+        xp2 = self.pool2(xe22)
+
+        xe31 = relu(self.e31(xp2))
+        xe32 = relu(self.e32(xe31))
+        xp3 = self.pool3(xe32)
+
+        xb1 = relu(self.b1(xp3))
+        xb2 = relu(self.b2(xb1))
+
+        # Decoder
+        xu1 = self.upconv1(xb2)
+        xu11 = torch.cat([xe32, xu1], dim=1)
+        xd11 = relu(self.d11(xu11))
+        xd12 = relu(self.d12(xd11))
+
+        xu2 = self.upconv2(xd12)
+        xu22 = torch.cat([xe22, xu2], dim=1)
+        xd21 = relu(self.d21(xu22))
+        xd22 = relu(self.d22(xd21))
+
+        xu3 = self.upconv3(xd22)
+        xu33 = torch.cat([xe12, xu3], dim=1)
+        xd31 = relu(self.d31(xu33))
+        xd32 = relu(self.d32(xd31))
+
+        # Output layer
+        out = self.outconv(xd32) + c1
+
+        return out
 
 
 class mydata(Dataset):
@@ -45,7 +105,7 @@ class mydata(Dataset):
         return self.Y.shape[-1]
 
     def __getitem__(self, idx):
-        return torch.unsqueeze(self.X[:, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, idx], 0).to(
+        return torch.unsqueeze(self.X[:, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, :, :, idx], 0).to(
             self.device)
 
 
@@ -54,7 +114,7 @@ def train_loop(dataloader, dataloader_test, model, mask, optimizer):
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         pred = model(X)
-        # loss = loss_fn(pred, y)
+        #loss = loss_fn(pred, y)
         loss = torch.zeros(1)
         if torch.cuda.is_available():
             loss = loss.to("cuda")
@@ -104,23 +164,23 @@ if __name__ == '__main__':
     data_string = r'Datasets/Blob/Blob_10_1/images3_blobs10_joined.mat'
     print(data_string)
     data = mat73.loadmat(data_string)
-    training_X = torch.tensor(data['all_datafl_clean'][:, :2048] + data['all_datax_clean'][:, :2048], dtype=torch.float32)
+    training_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, :2048], data['all_datax_clean'][:, :2048]), axis=0), dtype=torch.float32)
     training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
-    validation_X = torch.tensor(data['all_datafl_clean'][:, 2048:2400] + data['all_datax_clean'][:, 2048:2400], dtype=torch.float32)
+    validation_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, 2048:2400], data['all_datax_clean'][:, 2048:2400]), axis=0), dtype=torch.float32)
     validation_Y = torch.tensor(data['clean_img'][:, :, :, 2048:2400], dtype=torch.float32)
     # inmesh = np.int16(data['inmesh'].squeeze())
     mask = torch.tensor(data['mask'], dtype=torch.float32).to(device)
 
     model = Net().to(device)
-    loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    loss_fn = nn.MSELoss().cuda()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     train_dataloader = DataLoader(mydata(training_X, training_Y, device), batch_size=16)
     validate_dataloader = DataLoader(mydata(validation_X, validation_Y, device), batch_size=1)
 
     all_loss = []
     all_testloss = []
     mintest = np.inf
-    for epoch in range(200):
+    for epoch in range(400):
         print(f'Epoch {epoch:>2d}')
         trainloss, testloss = train_loop(train_dataloader, validate_dataloader, model, mask, optimizer)
         all_loss.append(trainloss)
@@ -148,10 +208,10 @@ if __name__ == '__main__':
     # %%
     # Now process the test set
     model = torch.load(model_path)
-    test_X = torch.tensor(data['all_datafl_clean'][:, 2400:] + data['all_datax_clean'][:, 2400:], dtype=torch.float32)
-    test_Y = np.zeros(test_X.shape)
+    test_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, 2400:], data['all_datax_clean'][:, 2400:]), axis=0), dtype=torch.float32)
+    test_Y = np.zeros((48, 48, 56, test_X.shape[1]))
     for i in range(test_X.shape[-1]):
-        tmp = test_X[:, :, :, i]
+        tmp = test_X[:, i]
         test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
 
     sio.savemat(path_root_string + r'end-to-end/test_processed.mat', {'recon2': test_Y})
