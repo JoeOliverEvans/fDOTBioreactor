@@ -15,7 +15,7 @@ import re
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(12*12*14, 12*12*14)  # Size of the input /4 in each dimension
+        self.fc1 = nn.Linear(5184, 12*12*14)  # Size of the input /4 in each dimension
         self.fc2 = nn.Linear(12*12*14, 12*12*14)  # Size of the input /4 in each dimension
         self.upconv3 = nn.ConvTranspose3d(1, 1, kernel_size=4, stride=4)
 
@@ -59,7 +59,7 @@ def train_loop(dataloader, dataloader_test, model, mask, optimizer):
                 loss = loss.add(torch.sum((tmp1 - tmp2) ** 2))
 
         optimizer.zero_grad()
-        #loss.backward()
+        loss.backward()
         optimizer.step()
 
         if batch % 10 == 0:
