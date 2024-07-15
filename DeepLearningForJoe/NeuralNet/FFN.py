@@ -39,7 +39,7 @@ class mydata(Dataset):
         return self.Y.shape[-1]
 
     def __getitem__(self, idx):
-        return torch.unsqueeze(self.X[:,:,:, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, :, :, idx], 0).to(
+        return torch.unsqueeze(self.X[:, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, :, :, idx], 0).to(
             self.device)
 
 
