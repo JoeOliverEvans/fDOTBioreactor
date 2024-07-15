@@ -8,18 +8,25 @@ from torch.nn.functional import relu
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+from torch.nn.functional import interpolate
 import re
 
 
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(2592*2, 48*48*56)  # Size of the input /4 in each dimension
+        self.fc1 = nn.Linear(12*12*14, 12*12*14)  # Size of the input /4 in each dimension
+        self.fc2 = nn.Linear(12*12*14, 12*12*14)  # Size of the input /4 in each dimension
+        self.upconv3 = nn.ConvTranspose3d(1, 1, kernel_size=4, stride=4)
+
+
 
     def forward(self, x):
-        f1 = relu(self.fc1(x))
-        return f1.reshape((x.shape[0],1,48,48,56))
-
+        c1 = relu(self.fc1(x))
+        c2 = relu(self.fc2(c1))
+        f1_reshaped = torch.flatten(c2, start_dim=1).view((-1,1,48,48,56))
+        xu3 = self.upconv3(f1_reshaped)
+        return xu3
 
 
 class mydata(Dataset):
@@ -32,7 +39,7 @@ class mydata(Dataset):
         return self.Y.shape[-1]
 
     def __getitem__(self, idx):
-        return torch.unsqueeze(self.X[:, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, :, :, idx], 0).to(
+        return torch.unsqueeze(self.X[:,:,:, idx], 0).to(self.device), torch.unsqueeze(self.Y[:, :, :, idx], 0).to(
             self.device)
 
 
@@ -52,7 +59,7 @@ def train_loop(dataloader, dataloader_test, model, mask, optimizer):
                 loss = loss.add(torch.sum((tmp1 - tmp2) ** 2))
 
         optimizer.zero_grad()
-        loss.backward()
+        #loss.backward()
         optimizer.step()
 
         if batch % 10 == 0:
@@ -88,13 +95,9 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # data = sio.loadmat('../SimData/3D/images.mat')
-    data_string = r'Datasets/Blob/Blob_10_1/images3_blobs10_joined.mat'
+    data_string = r'E:\Joe Evans\DeepLearningForJoe_GitHub\DeepLearningForJoe\NeuralNet\Datasets\Blob\Blob_10_1\images3_blobs10_joined.mat'
     print(data_string)
     data = mat73.loadmat(data_string)
-
-    print(np.concatenate((data['all_datafl_clean'][:, :2048], data['all_datax_clean'][:, :2048]), axis=0))
-    print(np.concatenate((data['all_datafl_clean'][:, :2048], data['all_datax_clean'][:, :2048]), axis=0).shape)
-    quit()
 
     training_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, :2048], data['all_datax_clean'][:, :2048]), axis=0), dtype=torch.float32)
     training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
@@ -132,10 +135,10 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = re.search('.*(?=\/)', data_string).group() + r'/'
-    model_path = path_root_string + r'end-to-end/3D_UNet_trained3'
+    path_root_string = r'G:\_Joe Evans\UNI\DeepLearningForJoe_GitHub\DeepLearningForJoe\NeuralNet\Datasets\Blob\Blob_10_1'
+    model_path = path_root_string + r'\end-to-end\3D_UNet_trained3'
     torch.save(model, model_path)
-    sio.savemat(path_root_string + 'end-to-end/loss_3D_UNet3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
+    sio.savemat(path_root_string + '\end-to-end\loss_3D_UNet3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
 
     # %%
     # Now process the test set
@@ -144,6 +147,6 @@ if __name__ == '__main__':
     test_Y = np.zeros((48, 48, 56, test_X.shape[1]))
     for i in range(test_X.shape[-1]):
         tmp = test_X[:, i]
-        test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
+        test_Y[:, :, :, i] = model(tmp).squeeze().detach().numpy()
 
-    sio.savemat(path_root_string + r'end-to-end/test_processed.mat', {'recon2': test_Y})
+    sio.savemat(path_root_string + r'\end-to-end\test_processed.mat', {'recon2': test_Y})
