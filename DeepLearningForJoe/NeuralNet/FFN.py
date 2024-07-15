@@ -24,7 +24,7 @@ class Net(nn.Module):
     def forward(self, x):
         c1 = relu(self.fc1(x))
         c2 = relu(self.fc2(c1))
-        f1_reshaped = torch.flatten(c2, start_dim=1).view((-1,1,48,48,56))
+        f1_reshaped = c2.view((-1,1,12,12,14))
         xu3 = self.upconv3(f1_reshaped)
         return xu3
 
