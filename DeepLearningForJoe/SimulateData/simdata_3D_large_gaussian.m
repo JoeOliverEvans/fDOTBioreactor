@@ -6,10 +6,10 @@ clear
 mesh = load_mesh('cylinder_large');
 
 %%
-samples = 2500;
-mesh.muaf = zeros(size(mesh.muaf)); % no background fluorescence
+samples = 2;
+mesh.muaf = ones(size(mesh.muaf)) * 1e-10; % background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 20;
+max_blobs = 3;
 blob_r_rng = [7,15];    % mm
 % blob_muaf_rng = [3,7];   % times baseline
 blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
@@ -32,6 +32,12 @@ all_fluctuate = zeros(2, samples);
 solver=get_solver('BiCGStab_GPU');
 opt = solver_options;
 opt.GPU = -1;
+
+xgrid = linspace(-65,65,48);
+ygrid = linspace(-65,65,48);
+zgrid = linspace(-75,75,56);
+mesh = gen_intmat(mesh, xgrid, ygrid, zgrid);
+noisy_img = zeros(48,48,56,samples);
 
 for rep = 1:samples
     fprintf('%d/%d\n', rep, samples);
@@ -86,29 +92,37 @@ for rep = 1:samples
     all_y(1:num_blob,rep) = blob_y;
     all_z(1:num_blob,rep) = blob_z;
     all_fluctuate(:,rep) = fluctuate;
-end
+    
+    first = true;
 
-%% Prepare for NN
-xgrid = linspace(-65,65,48);
-ygrid = linspace(-65,65,48);
-zgrid = linspace(-75,75,56);
-mesh = gen_intmat(mesh, xgrid, ygrid, zgrid);
+    if first == true
+            [J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
+            J = rmfield(J, 'completem');
+            %first = false;
+    end 
+    tmp1 = data.amplitudefl./data.amplitudex;
+    threshold_fl = 1e-12;
+    threshold_xx = 1e-12;
+    idx = ~(data.amplitudefl<threshold_fl | data.amplitudex<threshold_xx);
+    
+    tmp1 = tmp1(idx);
+    
+    recon_grid = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 0.0000000000000001, tmp1);
+    
+    recon_grid = reshape(recon_grid, length(xgrid), length(ygrid), length(zgrid));
+    
+    noisy_img(:,:,:,rep) = recon_grid;
+    clear 'recon_grid' 'tmp1' 'idx' 'threshold_fl' 'threshold_xx'
+end
 
 all_muaf2 = mesh.vol.mesh2grid*all_muaf;
 clean_img = reshape(all_muaf2,48,48,56,samples);
 
-[J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
-J = rmfield(J, 'completem');
-[~, invop] = tikhonov(J.complexm./data0.amplitudex,1);
 tmp = all_datafl_clean./all_datax_clean;
 maxamp = max(tmp);
 norm_noise = 0.02*rand(samples, 1);
 noisestd = maxamp' .* norm_noise;
 noise = abs(randn(size(tmp,1), samples)*diag(noisestd));
-% noise(noise<0) = 1e-20;
-
-recon = invop*(tmp + noise);
-noisy_img = reshape(recon,48,48,56,samples);
 
 inmesh = mesh.vol.gridinmesh;
 
@@ -123,5 +137,5 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_gaussian2500', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+save('images3_gaussian3_2500', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
 clear

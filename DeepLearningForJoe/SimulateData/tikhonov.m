@@ -3,7 +3,7 @@ function [xhat, inv_op, res] = tikhonov(A, alpha, y)
 m = size(A,1);
 n = size(A,2);
 if m > n
-    inv_op = INV(A'*A + alpha*eye(n))*A';
+    inv_op = (A'*A + alpha*eye(n))\A';
     if exist('y') && ~isempty(y)
         xhat = inv_op * y;
     else
