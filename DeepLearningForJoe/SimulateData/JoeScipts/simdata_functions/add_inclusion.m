@@ -17,9 +17,9 @@ for i=1:num_blob
     blob.z = blob_z(i);
     blob.r = blob_r(i);
     blob.muaf = blob_muaf(i);
-    if all(inclusion_type == 'blob')
+    if strcmp(inclusion_type, 'blob')
         mesh2 = add_blob(mesh2, blob);
-    elseif all(inclusion_type == 'cylinder')
+    elseif strcmp(inclusion_type, 'cylinder')
         %Cylinder position and rotation
         rotationAngles = [rand*360, rand*360, rand*360];
         translation = [-blob.x, -blob.y, -blob.z];
@@ -27,7 +27,7 @@ for i=1:num_blob
 
         blob.height = rand*75;
         mesh2 = add_cylinder_fl(mesh2, blob);
-    elseif all(inclusion_type == 'gaussian')
+    elseif strcmp(inclusion_type, 'gaussian')
         blob.sigma = rand * 20;
         mesh2 = add_gaussian_fl(mesh2, blob);
     else
