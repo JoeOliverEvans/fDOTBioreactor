@@ -15,16 +15,12 @@ import re
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(5184, 12*12*14)  # Size of the input /4 in each dimension
-        self.fc2 = nn.Linear(12*12*14, 12*12*14)  # Size of the input /4 in each dimension
+        self.fc1 = nn.Linear(5184, 12 * 12 * 14)  # Size of the input /4 in each dimension
         self.upconv3 = nn.ConvTranspose3d(1, 1, kernel_size=4, stride=4)
-
-
 
     def forward(self, x):
         c1 = relu(self.fc1(x))
-        c2 = relu(self.fc2(c1))
-        f1_reshaped = c2.view((-1,1,12,12,14))
+        f1_reshaped = c1.view((-1, 1, 12, 12, 14))
         xu3 = self.upconv3(f1_reshaped)
         return xu3
 
@@ -99,9 +95,11 @@ if __name__ == '__main__':
     print(data_string)
     data = mat73.loadmat(data_string)
 
-    training_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, :2048], data['all_datax_clean'][:, :2048]), axis=0), dtype=torch.float32)
+    training_X = torch.tensor((data['all_datafl_clean'][:, :2048] / data['all_datax_clean'][:, :2048]),
+                              dtype=torch.float32)
     training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
-    validation_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, 2048:2400], data['all_datax_clean'][:, 2048:2400]), axis=0), dtype=torch.float32)
+    validation_X = torch.tensor((data['all_datafl_clean'][:, 2048:2400] / data['all_datax_clean'][:, 2048:2400]),
+                                dtype=torch.float32)
     validation_Y = torch.tensor(data['clean_img'][:, :, :, 2048:2400], dtype=torch.float32)
     # inmesh = np.int16(data['inmesh'].squeeze())
     mask = torch.tensor(data['mask'], dtype=torch.float32).to(device)
@@ -138,12 +136,13 @@ if __name__ == '__main__':
     path_root_string = r'G:\_Joe Evans\UNI\DeepLearningForJoe_GitHub\DeepLearningForJoe\NeuralNet\Datasets\Blob\Blob_10_1'
     model_path = path_root_string + r'\end-to-end\3D_UNet_trained3'
     torch.save(model, model_path)
-    sio.savemat(path_root_string + '\end-to-end\loss_3D_UNet3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
+    sio.savemat(path_root_string + '\end-to-end\loss_3D_UNet3.mat',
+                {'training_loss': all_loss, 'testing_loss': all_testloss})
 
     # %%
     # Now process the test set
     model = torch.load(model_path)
-    test_X = torch.tensor(np.concatenate((data['all_datafl_clean'][:, 2400:], data['all_datax_clean'][:, 2400:]), axis=0), dtype=torch.float32)
+    test_X = torch.tensor((data['all_datafl_clean'][:, 2400:] / data['all_datax_clean'][:, 2400:]), dtype=torch.float32)
     test_Y = np.zeros((48, 48, 56, test_X.shape[1]))
     for i in range(test_X.shape[-1]):
         tmp = test_X[:, i]
