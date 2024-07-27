@@ -3,8 +3,8 @@ function [noisy_img, data0, J] = recon_noisy_channel_selection(rep, mesh, solver
 %   Detailed explanation goes here
 
 %%%
-threshold_fl = mean(data.amplitudefl) + 2*std(data.amplitudefl);
-threshold_xx = mean(data.amplitudex) + 2*std(data.amplitudex);
+threshold_fl = mean(data.amplitudefl) + 1*std(data.amplitudefl);
+threshold_xx = mean(data.amplitudex) + 1*std(data.amplitudex);
 %%%
 
 [J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
