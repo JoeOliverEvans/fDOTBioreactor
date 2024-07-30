@@ -107,7 +107,7 @@ for rep = 1:samples
     
     tmp1 = tmp1(idx);
     
-    recon_grid = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 0.0000000000000001, tmp1);
+    recon_grid = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 1, tmp1);
     
     recon_grid = reshape(recon_grid, length(xgrid), length(ygrid), length(zgrid));
     

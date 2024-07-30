@@ -14,7 +14,7 @@ samples=2500;
 max_blobs=3;
 blob_r_rng=[7,15];
 blob_muaf_rng=[1e-3,1e-1];
-channel_selection = true;
+channel_selection = false;
 %%%
 
 [mesh, num_nodes, boundary, radius, all_muaf, all_datax, all_datafl, all_datax_clean, all_datafl_clean, all_x, all_y, all_z, all_nblob, all_noise, all_fluctuate, solver, opt, xgrid, ygrid, zgrid, noisy_img] = initial_setup(mesh, samples,max_blobs);
