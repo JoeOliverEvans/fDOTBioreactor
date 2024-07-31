@@ -38,49 +38,41 @@ def calculate_evaluation(clean_images, model_output):
 
 
 if __name__ == '__main__':
-    if True:
-        file_path = r'..\..\SimulateData\Experiments\_testing\images3_max3_allchannel'
+    file_path = r'../../SimulateData/Experiments/a_max3_vs_only3/'
 
-        ground_truth = mat73.loadmat(file_path + r'.mat')  # Array containing the ground truth number of inclusions
-        ground_truth_all_nblobs = ground_truth['all_nblob']
+    ground_truth = mat73.loadmat(file_path + r'images3_blobs_testing.mat') # Array containing the ground truth number of inclusions
+    ground_truth_all_nblobs = ground_truth['all_nblob']
+    ground_truth_clean_img = ground_truth['clean_img']
 
-        noisy = ground_truth['noisy_img']
-        print(noisy[:,:,:,1].mean())
-        print(calculate_num_inclusions(noisy>5, 2))
-        print(ground_truth_all_nblobs)
-    else:
-        num = 2400
 
-        file_path = r'C:\Joe Evans\error'
+    output_model1 = sio.loadmat(file_path + r'test_processed_max3_testing.mat')['recon2'] # Array containing the reconstruction
+    output_model2 = sio.loadmat(file_path + r'test_processed_only3_testing.mat')['recon2']
 
-        ground_truth = mat73.loadmat(file_path + r'.mat') # Array containing the ground truth number of inclusions
-        ground_truth_all_nblobs = ground_truth['all_nblob'][num:]
-        ground_truth_clean_img = ground_truth['clean_img'][num:]
+    num_inclusions_model1 = calculate_num_inclusions(ndimage.gaussian_filter(output_model1, 1) > 5, 30)
+    num_inclusions_model2 = calculate_num_inclusions(ndimage.gaussian_filter(output_model2, 1) > 5, 30)
+    print(num_inclusions_model1)
+    evaluation_model1 = calculate_evaluation(ground_truth_clean_img, output_model1)
+    evaluation_model2 = calculate_evaluation(ground_truth_clean_img, output_model2)
 
-        output_model1 = mat73.loadmat(file_path + r'test_processed.mat')['recon2'] # Array containing the reconstruction
-        output_model2 = mat73.loadmat(file_path + r'test_processed.mat')['recon2']
+    fig, ax1 = plt.subplots()
 
-        num_inclusions_model1 = calculate_num_inclusions(output_model1)
-        num_inclusions_model2 = calculate_num_inclusions(output_model2)
+    for i in range(10):
+        ax1.boxplot(num_inclusions_model1[i*20:i*20+20], positions=[i+1.25])
+        ax1.boxplot(num_inclusions_model2[i*20:i*20+20], positions=[i+0.75])
+    ax1.plot([1,10],[1,10])
+    ax1.set_title('Number of inclusions reconstructed vs ground truth number')
+    ax1.set_xlabel('Ground truth number of inclusions')
+    ax1.set_ylabel('Reconstructed number of inclusions (boxplot)')
+    ax1.set_xticklabels([1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10])
+    ax1.set_ylim(0,10)
 
-        evaluation_model1 = calculate_evaluation(ground_truth_clean_img, output_model1)
-        evaluation_model2 = calculate_evaluation(ground_truth_clean_img, output_model2)
+    ax2 = ax1.twinx()
+    #ax2.scatter(ground_truth_all_nblobs, evaluation_model1, color='blue', label='max3')
+    #ax2.scatter(ground_truth_all_nblobs, evaluation_model2, color='red', label='only3')
+    ax2.set_ylabel('MSE loss (violin plot)')
 
-        fig, ax1 = plt.subplots()
-
-        ax1.boxplot((ground_truth_all_nblobs, num_inclusions_model1), color='blue', label='model1')
-        ax1.boxplot((ground_truth_all_nblobs, num_inclusions_model2), color='red', label='model2')
-        fig.title('Comparison of number of inclusions reconstructed vs ground truth number')
-        ax1.set_xlabel('Ground truth number of inclusions')
-        ax1.set_ylabel('Reconstructed number of inclusions (boxplot)')
-
-        ax2 = ax1.twinx()
-        ax2.violinplot((ground_truth_all_nblobs, evaluation_model1), color='blue', label='model1')
-        ax2.violinplot((ground_truth_all_nblobs, evaluation_model2), color='red', label='model2')
-        ax2.set_ylabel('MSE loss (violin plot)')
-
-        fig.tight_layout()
-        plt.legend()
-        plt.savefig(file_path + r'InclusionNumberComparison.pdf', bbox_inches='tight', format='pdf', dpi=300)
-        plt.show()
+    fig.tight_layout()
+    plt.legend()
+    plt.savefig(file_path + r'InclusionNumberComparison.pdf', bbox_inches='tight', format='pdf', dpi=300)
+    plt.show()
 
