@@ -1,14 +1,23 @@
 addpath(genpath('/home/jxe094/NIRFASTer'))
 addpath('JoeScipts')
+addpath(genpath('../OptionalPatches'))
 clear
 
 mesh = load_mesh('cylinder_large');
 
+
+mesh.muax = 5e-4*ones(size(mesh.muax));
+mesh.muam = mesh.muax;
+mesh.musx = 0.1*ones(size(mesh.musx));
+mesh.musm = mesh.musx;
+mesh.kappax = 1./(3*(mesh.muax + mesh.musx));
+mesh.kappam = 1./(3*(mesh.muam + mesh.musm));
+
 %%
-samples = 2000;
+samples = 200;
 mesh.muaf = zeros(size(mesh.muaf)); % no background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 10;
+max_blobs = 3;
 blob_r_rng = [7,15];    % mm
 % blob_muaf_rng = [3,7];   % times baseline
 blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
@@ -32,10 +41,10 @@ solver=get_solver('BiCGStab_GPU');
 opt = solver_options;
 opt.GPU = -1;
 
-for rep = 1:samples
+for rep = 1:samples+1
     fprintf('%d/%d\n', rep, samples);
     mesh2 = mesh;
-    num_blob = randperm(max_blobs, 1);
+    num_blob = fix((rep-1)/20) + 1;
     blob_r = rand(num_blob,1) * (blob_r_rng(2) - blob_r_rng(1)) + blob_r_rng(1);
     blob_muaf = rand(num_blob,1) * (blob_muaf_rng(2) - blob_muaf_rng(1)) + blob_muaf_rng(1);
     blob_x = nan;
@@ -124,4 +133,6 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+save('images3_blobs_testing', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+clear
+
