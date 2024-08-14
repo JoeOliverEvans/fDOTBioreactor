@@ -15,10 +15,10 @@ mesh.kappax = 1./(3*(mesh.muax + mesh.musx));
 mesh.kappam = 1./(3*(mesh.muam + mesh.musm));
 
 %%
-samples = 1;
+samples = 20;
 mesh.muaf = ones(size(mesh.muaf)) * 1e-10; % background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 3;
+max_blobs = 10;
 blob_r_rng = [7,15];    % mm
 % blob_muaf_rng = [3,7];   % times baseline
 blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
@@ -40,7 +40,7 @@ all_fluctuate = zeros(2, samples);
 
 solver=get_solver('BiCGStab_GPU');
 opt = solver_options;
-opt.GPU = --1;
+opt.GPU = -2;
 
 xgrid = linspace(-65,65,48);
 ygrid = linspace(-65,65,48);
@@ -51,10 +51,14 @@ noisy_img = zeros(48,48,56,samples);
 [J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
 J = rmfield(J, 'completem');
 
+
+globalsimvals = [];
+regularisations = [];
+
 for rep = 1:samples
     fprintf('%d/%d\n', rep, samples);
     mesh2 = mesh;
-    num_blob = 5;
+    num_blob = fix((rep-1)/2) + 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     blob_r = rand(num_blob,1) * (blob_r_rng(2) - blob_r_rng(1)) + blob_r_rng(1);
     blob_muaf = rand(num_blob,1) * (blob_muaf_rng(2) - blob_muaf_rng(1)) + blob_muaf_rng(1);
     blob_x = nan;
@@ -109,20 +113,52 @@ for rep = 1:samples
     
     
    
-    threshold_fl = 0.005*max(data.amplitudefl);
-    threshold_xx = 0.005*max(data.amplitudex);
+    threshold_fl = 0.*max(data.amplitudefl);
+    threshold_xx = 0.01*max(data.amplitudex);
     idx = ~(data.amplitudefl<threshold_fl | data.amplitudex<threshold_xx);
     
-    for p = 1:4
-        p
-        recon_grid = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 1*10^(p-5), data.amplitudefl(idx)./data.amplitudex(idx));
-        
-        recon_grid = reshape(recon_grid, length(xgrid), length(ygrid), length(zgrid));
-        
-        noisy_img(:,:,:,rep+p-1) = recon_grid;
-    end
-    clear 'recon_grid' 'tmp1' 'idx' 'threshold_fl' 'threshold_xx'
+    reg_strength_exponent_guess = (2.76095494 * sum(data.amplitudefl + noise_lv(1)*max(data.amplitudefl).*randn(size(data.amplitudefl))) + -56.51690199 * sum(data.amplitudex + noise_lv(2)*max(data.amplitudex).*randn(size(data.amplitudex))) + 30.45021654);
     
+    upper_reg_exponent = ceil(reg_strength_exponent_guess);
+    lower_reg_exponent = floor(reg_strength_exponent_guess);
+
+    recon_grid_upper = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 10^(upper_reg_exponent), data.amplitudefl(idx)./data.amplitudex(idx));
+    recon_grid_lower = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 10^(lower_reg_exponent), data.amplitudefl(idx)./data.amplitudex(idx));
+    
+    recon_grid_upper = reshape(recon_grid_upper, length(xgrid), length(ygrid), length(zgrid));
+    recon_grid_lower = reshape(recon_grid_lower, length(xgrid), length(ygrid), length(zgrid));
+    
+    [ssimval_upper,ssimmap_upper] = ssim(recon_grid_upper,ref);
+    [ssimval_lower,ssimmap_lower] = ssim(recon_grid_lower,ref);
+    
+    ssimvals = [ssimval_upper, ssimval_lower];
+
+    ongoing = true;
+
+    reg_exponent = [10^ceil(reg_strength_exponent_guess)];
+    reg_exponents = [reg_exponent, 10^lower_reg_exponent];
+
+    while ongoing
+         value, index = max(ssimvals);
+         if ismember(reg_exponents(index)/10, reg_exponents) == false
+            reg_exponents = [reg_exponents, reg_exponents(index)/10];
+            recon_grid_new = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), reg_exponents(index)/10, data.amplitudefl(idx)./data.amplitudex(idx));
+            recon_grid_new = reshape(recon_grid_new, length(xgrid), length(ygrid), length(zgrid));
+            [ssimval_new,ssimmap_new] = ssim(recon_grid_new,ref);
+            ssimvals = [ssimvals, ssimval_new];
+
+         elseif ismember(reg_exponents(index)*10, reg_exponents) == false
+            reg_exponents = [reg_exponents, reg_exponents(index)*10];
+            recon_grid_new = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), reg_exponents(index)*10, data.amplitudefl(idx)./data.amplitudex(idx));
+            recon_grid_new = reshape(recon_grid_new, length(xgrid), length(ygrid), length(zgrid));
+            [ssimval_new,ssimmap_new] = ssim(recon_grid_new,ref);
+            ssimvals = [ssimvals, ssimval_new];
+         else
+            ongoing = false;
+            globalsimvals = [globalsimvals, max(ssimvals)];
+            regularisations = [regularisations, max(reg_exponents)];
+         end
+    end
 end
 
 all_muaf2 = mesh.vol.mesh2grid*all_muaf;
@@ -147,5 +183,5 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_gaussian3_2500', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+save('regularisation_information','all_datafl', 'all_datax', 'globalsimvals', 'regularisations','-v7.3')
 clear
