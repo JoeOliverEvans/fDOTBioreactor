@@ -2,8 +2,8 @@ addpath(genpath('/home/jxe094/NIRFASTer'))
 addpath(genpath('../../JoeScipts'))
 addpath(genpath('../..'))
 addpath(genpath('/home/jxe094/Work/DeepLearningForJoe/OptionalPatches'))
-addpath(genpath('../../../../../NIRFASTer')
-addpath(genpath('../../../../NIRFASTer_FLpatch3')
+addpath(genpath('../../../../../NIRFASTer'))
+addpath(genpath('../../../../NIRFASTer_FLpatch3'))
 clear
 
 mesh = load_mesh('cylinder/cylinder_dense');
