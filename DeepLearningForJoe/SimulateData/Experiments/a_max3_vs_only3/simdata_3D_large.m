@@ -57,7 +57,7 @@ J = rmfield(J, 'completem');
 for rep = 1:samples
     fprintf('%d/%d\n', rep, samples);
     mesh2 = mesh;
-    num_blob = 10;
+    num_blob = randperm(max_blobs,1);
     blob_r = rand(num_blob,1) * (blob_r_rng(2) - blob_r_rng(1)) + blob_r_rng(1);
     blob_muaf = rand(num_blob,1) * (blob_muaf_rng(2) - blob_muaf_rng(1)) + blob_muaf_rng(1);
     blob_x = nan;
@@ -110,12 +110,14 @@ for rep = 1:samples
     all_z(1:num_blob,rep) = blob_z;
     all_fluctuate(:,rep) = fluctuate;
     
-    threshold_fl = 0.02*max(data.amplitudefl);
-    threshold_xx = 0.02*max(data.amplitudex);
+    threshold_fl = 0.005*max(data.amplitudefl);
+    threshold_xx = 0.005*max(data.amplitudex);
     idx = ~(data.amplitudefl<threshold_fl | data.amplitudex<threshold_xx);
     
     %%%Calculate the regularisation strength
-    reg_strength = 96.04557519 * sum(data.amplitudefl + noise_lv(1)*max(data.amplitudefl).*randn(size(data.amplitudefl))) + 135.86552357 * sum(data.amplitudex + noise_lv(2)*max(data.amplitudex).*randn(size(data.amplitudex))) + -107.04920421;
+    var_fl = sum(data.amplitudefl + noise_lv(1)*max(data.amplitudefl).*randn(size(data.amplitudefl)));
+    var_x = sum(data.amplitudex + noise_lv(2)*max(data.amplitudex).*randn(size(data.amplitudex)));
+    reg_strength = 75.93555915 * var_fl + 9.00279146 * var_x + -5.80304808;
     
     recon_grid = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 10^reg_strength, data.amplitudefl(idx)./data.amplitudex(idx));
     
@@ -140,7 +142,7 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs_only10', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
+save('images3_blobs_max10', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
 clear
 
 
