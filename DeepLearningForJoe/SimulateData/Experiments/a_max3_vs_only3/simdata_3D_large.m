@@ -21,7 +21,7 @@ mesh.kappam = 1./(3*(mesh.muam + mesh.musm));
 samples = 2500;
 mesh.muaf = ones(size(mesh.muaf)) * 1e-10; % background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 10;
+max_blobs = 3;
 blob_r_rng = [7,15];    % mm
 % blob_muaf_rng = [3,7];   % times baseline
 blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
@@ -142,7 +142,7 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs_max10', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
+save('images3_blobs_max3', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
 clear
 
 
