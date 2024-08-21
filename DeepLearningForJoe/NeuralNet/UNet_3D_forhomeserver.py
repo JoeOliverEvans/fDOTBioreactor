@@ -181,7 +181,7 @@ if __name__ == '__main__':
         all_testloss.append(testloss)
         if testloss < mintest:
             mintest = testloss
-            patience = 15  # Reset patience counter
+            patience = 10  # Reset patience counter
         # if epoch>5:
         #     if np.all(np.array(all_testloss[-5:])>mintest):
         #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = re.search('.*(?=\/)', data_string).group() + r'/'
+    path_root_string = r'../SimulateData/Experiments/a_max3_vs_only3/'
     model_path = path_root_string + r'3D_UNet_trained3_max10'
     torch.save(model, model_path)
     sio.savemat(path_root_string + 'loss_3D_UNet3_max10.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
@@ -249,7 +249,6 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = re.search('.*(?=\/)', data_string).group() + r'/'
     model_path = path_root_string + r'3D_UNet_trained3_only10'
     torch.save(model, model_path)
     sio.savemat(path_root_string + 'loss_3D_UNet3_only10.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
@@ -304,7 +303,6 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = re.search('.*(?=\/)', data_string).group() + r'/'
     model_path = path_root_string + r'3D_UNet_trained3_max3'
     torch.save(model, model_path)
     sio.savemat(path_root_string + 'loss_3D_UNet3_max3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
@@ -359,7 +357,6 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = re.search('.*(?=\/)', data_string).group() + r'/'
     model_path = path_root_string + r'3D_UNet_trained3_only3'
     torch.save(model, model_path)
     sio.savemat(path_root_string + 'loss_3D_UNet3_only3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
