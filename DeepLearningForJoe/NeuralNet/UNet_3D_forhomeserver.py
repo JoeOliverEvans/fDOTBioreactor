@@ -148,7 +148,7 @@ def train_loop(dataloader, dataloader_test, model, mask, optimizer):
 if __name__ == '__main__':
     device = (
         "cuda"
-        if torch.cuda.is_available()
+        if False
         else "cpu"
     )
     # device = ("cpu")
