@@ -18,7 +18,7 @@ mesh.kappax = 1./(3*(mesh.muax + mesh.musx));
 mesh.kappam = 1./(3*(mesh.muam + mesh.musm));
 
 %%
-samples = 2500;
+samples = 300;
 mesh.muaf = ones(size(mesh.muaf)) * 1e-10; % background fluorescence
 num_nodes = size(mesh.nodes, 1);
 max_blobs = 3;
@@ -57,7 +57,7 @@ J = rmfield(J, 'completem');
 for rep = 1:samples
     fprintf('%d/%d\n', rep, samples);
     mesh2 = mesh;
-    num_blob = randperm(max_blobs,1);
+    num_blob =  fix((rep-1)/20) + 1; % fix((rep-1)/20) + 1
     blob_r = rand(num_blob,1) * (blob_r_rng(2) - blob_r_rng(1)) + blob_r_rng(1);
     blob_muaf = rand(num_blob,1) * (blob_muaf_rng(2) - blob_muaf_rng(1)) + blob_muaf_rng(1);
     blob_x = nan;
@@ -142,7 +142,7 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs_max3', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
+save('images3_blobs_test15', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
 clear
 
 
