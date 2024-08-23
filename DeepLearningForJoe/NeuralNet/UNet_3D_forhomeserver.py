@@ -155,7 +155,7 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # data = sio.loadmat('../SimData/3D/images.mat')
-    data_string = r'../SimulateData/Experiments/DataFromHome/images3_blobs_only10.mat'
+    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_blobs_only10.mat'
     print(data_string)
     data = mat73.loadmat(data_string)
     training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
