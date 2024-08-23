@@ -155,7 +155,7 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # data = sio.loadmat('../SimData/3D/images.mat')
-    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_blobs_max10.mat'
+    data_string = r'../SimulateData/Experiments/DataFromHome/images3_blobs_only10.mat'
     print(data_string)
     data = mat73.loadmat(data_string)
     training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
@@ -194,61 +194,7 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = r'../SimulateData/Experiments/a_max3_vs_only3/'
-    model_path = path_root_string + r'3D_UNet_trained3_max10'
-    torch.save(model, model_path)
-    sio.savemat(path_root_string + 'loss_3D_UNet3_max10.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
-
-    # %%
-    # Now process the test set
-    model = torch.load(model_path)
-    test_X = torch.tensor(data['noisy_img'][:, :, :, 2400:], dtype=torch.float32)
-    test_Y = np.zeros(test_X.shape)
-    for i in range(test_X.shape[-1]):
-        tmp = test_X[:, :, :, i]
-        test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
-
-    sio.savemat(path_root_string + r'test_processed_max10.mat', {'recon2': test_Y})
-
-    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_blobs_only10.mat'
-    print(data_string)
-    data = mat73.loadmat(data_string)
-    training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
-    training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
-    validation_X = torch.tensor(data['noisy_img'][:, :, :, 2048:2400], dtype=torch.float32)
-    validation_Y = torch.tensor(data['clean_img'][:, :, :, 2048:2400], dtype=torch.float32)
-    # inmesh = np.int16(data['inmesh'].squeeze())
-    mask = torch.tensor(data['mask'], dtype=torch.float32).to(device)
-
-    model = UNet().to(device)
-    loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    train_dataloader = DataLoader(mydata(training_X, training_Y, device), batch_size=16)
-    validate_dataloader = DataLoader(mydata(validation_X, validation_Y, device), batch_size=1)
-
-    all_loss = []
-    all_testloss = []
-    mintest = np.inf
-    for epoch in range(400):
-        print(f'Epoch {epoch:>2d}')
-        trainloss, testloss = train_loop(train_dataloader, validate_dataloader, model, mask, optimizer)
-        all_loss.append(trainloss)
-        all_testloss.append(testloss)
-        if testloss < mintest:
-            mintest = testloss
-            patience = 10  # Reset patience counter
-        # if epoch>5:
-        #     if np.all(np.array(all_testloss[-5:])>mintest):
-        #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
-        #         break
-        else:
-            patience -= 1
-            if patience == 0:
-                break
-
-    model = model.to('cpu')
-    model.eval()
-
+    path_root_string = r'../SimulateData/Experiments/DataFromHome/'
     model_path = path_root_string + r'3D_UNet_trained3_only10'
     torch.save(model, model_path)
     sio.savemat(path_root_string + 'loss_3D_UNet3_only10.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
@@ -264,110 +210,3 @@ if __name__ == '__main__':
 
     sio.savemat(path_root_string + r'test_processed_only10.mat', {'recon2': test_Y})
 
-    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_blobs_max3.mat'
-    print(data_string)
-    data = mat73.loadmat(data_string)
-    training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
-    training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
-    validation_X = torch.tensor(data['noisy_img'][:, :, :, 2048:2400], dtype=torch.float32)
-    validation_Y = torch.tensor(data['clean_img'][:, :, :, 2048:2400], dtype=torch.float32)
-    # inmesh = np.int16(data['inmesh'].squeeze())
-    mask = torch.tensor(data['mask'], dtype=torch.float32).to(device)
-
-    model = UNet().to(device)
-    loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    train_dataloader = DataLoader(mydata(training_X, training_Y, device), batch_size=16)
-    validate_dataloader = DataLoader(mydata(validation_X, validation_Y, device), batch_size=1)
-
-    all_loss = []
-    all_testloss = []
-    mintest = np.inf
-    for epoch in range(400):
-        print(f'Epoch {epoch:>2d}')
-        trainloss, testloss = train_loop(train_dataloader, validate_dataloader, model, mask, optimizer)
-        all_loss.append(trainloss)
-        all_testloss.append(testloss)
-        if testloss < mintest:
-            mintest = testloss
-            patience = 10  # Reset patience counter
-        # if epoch>5:
-        #     if np.all(np.array(all_testloss[-5:])>mintest):
-        #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
-        #         break
-        else:
-            patience -= 1
-            if patience == 0:
-                break
-
-    model = model.to('cpu')
-    model.eval()
-
-    model_path = path_root_string + r'3D_UNet_trained3_max3'
-    torch.save(model, model_path)
-    sio.savemat(path_root_string + 'loss_3D_UNet3_max3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
-
-    # %%
-    # Now process the test set
-    model = torch.load(model_path)
-    test_X = torch.tensor(data['noisy_img'][:, :, :, 2400:], dtype=torch.float32)
-    test_Y = np.zeros(test_X.shape)
-    for i in range(test_X.shape[-1]):
-        tmp = test_X[:, :, :, i]
-        test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
-
-    sio.savemat(path_root_string + r'test_processed_max3.mat', {'recon2': test_Y})
-
-    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_blobs_only3.mat'
-    print(data_string)
-    data = mat73.loadmat(data_string)
-    training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
-    training_Y = torch.tensor(data['clean_img'][:, :, :, :2048], dtype=torch.float32)
-    validation_X = torch.tensor(data['noisy_img'][:, :, :, 2048:2400], dtype=torch.float32)
-    validation_Y = torch.tensor(data['clean_img'][:, :, :, 2048:2400], dtype=torch.float32)
-    # inmesh = np.int16(data['inmesh'].squeeze())
-    mask = torch.tensor(data['mask'], dtype=torch.float32).to(device)
-
-    model = UNet().to(device)
-    loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    train_dataloader = DataLoader(mydata(training_X, training_Y, device), batch_size=16)
-    validate_dataloader = DataLoader(mydata(validation_X, validation_Y, device), batch_size=1)
-
-    all_loss = []
-    all_testloss = []
-    mintest = np.inf
-    for epoch in range(400):
-        print(f'Epoch {epoch:>2d}')
-        trainloss, testloss = train_loop(train_dataloader, validate_dataloader, model, mask, optimizer)
-        all_loss.append(trainloss)
-        all_testloss.append(testloss)
-        if testloss < mintest:
-            mintest = testloss
-            patience = 10  # Reset patience counter
-        # if epoch>5:
-        #     if np.all(np.array(all_testloss[-5:])>mintest):
-        #         print('Test loss exceeds minimum for 5 consecutive epochs. Terminating.')
-        #         break
-        else:
-            patience -= 1
-            if patience == 0:
-                break
-
-    model = model.to('cpu')
-    model.eval()
-
-    model_path = path_root_string + r'3D_UNet_trained3_only3'
-    torch.save(model, model_path)
-    sio.savemat(path_root_string + 'loss_3D_UNet3_only3.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
-
-    # %%
-    # Now process the test set
-    model = torch.load(model_path)
-    test_X = torch.tensor(data['noisy_img'][:, :, :, 2400:], dtype=torch.float32)
-    test_Y = np.zeros(test_X.shape)
-    for i in range(test_X.shape[-1]):
-        tmp = test_X[:, :, :, i]
-        test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
-
-    sio.savemat(path_root_string + r'test_processed_only3.mat', {'recon2': test_Y})
