@@ -194,10 +194,10 @@ if __name__ == '__main__':
     model = model.to('cpu')
     model.eval()
 
-    path_root_string = r'../SimulateData/Experiments/DataFromHome/'
-    model_path = path_root_string + r'3D_UNet_trained3_only10'
+    path_root_string = r'../SimulateData/Experiments/a_max3_vs_only3/'
+    model_path = path_root_string + r'3D_UNet_trained3_only10new'
     torch.save(model, model_path)
-    sio.savemat(path_root_string + 'loss_3D_UNet3_only10.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
+    sio.savemat(path_root_string + 'loss_3D_UNet3_only10new.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
 
     # %%
     # Now process the test set
@@ -208,5 +208,5 @@ if __name__ == '__main__':
         tmp = test_X[:, :, :, i]
         test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
 
-    sio.savemat(path_root_string + r'test_processed_only10.mat', {'recon2': test_Y})
+    sio.savemat(path_root_string + r'test_processed_only10new.mat', {'recon2': test_Y})
 
