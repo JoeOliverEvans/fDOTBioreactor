@@ -142,7 +142,7 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs_test15', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
+save('images3_blobs_max6', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
 clear
 
 
