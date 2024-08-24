@@ -18,10 +18,10 @@ mesh.kappax = 1./(3*(mesh.muax + mesh.musx));
 mesh.kappam = 1./(3*(mesh.muam + mesh.musm));
 
 %%
-samples = 300;
+samples = 2500;
 mesh.muaf = ones(size(mesh.muaf)) * 1e-10; % background fluorescence
 num_nodes = size(mesh.nodes, 1);
-max_blobs = 3;
+max_blobs = 6;
 blob_r_rng = [7,15];    % mm
 % blob_muaf_rng = [3,7];   % times baseline
 blob_muaf_rng = [1e-3,1e-1];   % mm-1; eta=0.4 in this mesh
@@ -57,7 +57,7 @@ J = rmfield(J, 'completem');
 for rep = 1:samples
     fprintf('%d/%d\n', rep, samples);
     mesh2 = mesh;
-    num_blob =  fix((rep-1)/20) + 1; % fix((rep-1)/20) + 1
+    num_blob =  randperm(max_blobs, 1); % fix((rep-1)/20) + 1
     blob_r = rand(num_blob,1) * (blob_r_rng(2) - blob_r_rng(1)) + blob_r_rng(1);
     blob_muaf = rand(num_blob,1) * (blob_muaf_rng(2) - blob_muaf_rng(1)) + blob_muaf_rng(1);
     blob_x = nan;
