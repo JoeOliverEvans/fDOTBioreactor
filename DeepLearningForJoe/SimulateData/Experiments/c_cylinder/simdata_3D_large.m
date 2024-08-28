@@ -1,9 +1,13 @@
 addpath(genpath('/home/jxe094/NIRFASTer'))
-addpath('JoeScipts')
-addpath(genpath('../OptionalPatches'))
+addpath(genpath('../../JoeScipts'))
+addpath(genpath('../..'))
+addpath(genpath('/home/jxe094/Work/DeepLearningForJoe/OptionalPatches'))
+addpath(genpath('../../../../../NIRFASTer'))
+addpath(genpath('../../../../NIRFASTer_FLpatch3'))
 clear
 
-mesh = load_mesh('cylinder_large');
+
+mesh = load_mesh('../../cylinder_dense/cylinder_dense');
 
 
 mesh.muax = 5e-4*ones(size(mesh.muax));
@@ -14,8 +18,8 @@ mesh.kappax = 1./(3*(mesh.muax + mesh.musx));
 mesh.kappam = 1./(3*(mesh.muam + mesh.musm));
 
 %%
-samples = 200;
-mesh.muaf = zeros(size(mesh.muaf)); % no background fluorescence
+samples = 2500;
+mesh.muaf = ones(size(mesh.muaf)) * 1e-10; % background fluorescence
 num_nodes = size(mesh.nodes, 1);
 max_blobs = 3;
 blob_r_rng = [7,15];    % mm
@@ -39,12 +43,21 @@ all_fluctuate = zeros(2, samples);
 
 solver=get_solver('BiCGStab_GPU');
 opt = solver_options;
-opt.GPU = -1;
+opt.GPU = 0;
 
-for rep = 1:samples+1
+xgrid = linspace(-65,65,48);
+ygrid = linspace(-65,65,48);
+zgrid = linspace(-75,75,56);
+mesh = gen_intmat(mesh, xgrid, ygrid, zgrid);
+noisy_img = zeros(48,48,56,samples);
+
+[J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
+J = rmfield(J, 'completem');
+
+for rep = 1:samples
     fprintf('%d/%d\n', rep, samples);
     mesh2 = mesh;
-    num_blob = fix((rep-1)/20) + 1;
+    num_blob =  randperm(max_blobs, 1); % fix((rep-1)/20) + 1
     blob_r = rand(num_blob,1) * (blob_r_rng(2) - blob_r_rng(1)) + blob_r_rng(1);
     blob_muaf = rand(num_blob,1) * (blob_muaf_rng(2) - blob_muaf_rng(1)) + blob_muaf_rng(1);
     blob_x = nan;
@@ -60,12 +73,15 @@ for rep = 1:samples+1
         blob_y = rand(num_blob,1) * (boundary(4)-boundary(3)) + boundary(3);
         blob_z = rand(num_blob,1) .* (boundary(6)-boundary(5)-blob_r-2) + (boundary(5)+blob_r);
     end
-    
+
     fluctuate = 0.1*(rand(2,1)-0.5); % fluctuate the background mua by +/-10%
     mesh2.muax = mesh.muax*(1+fluctuate(1));
     mesh2.muam = mesh2.muax;
     mesh2.musx = mesh.musx*(1+fluctuate(2));
     mesh2.musm = mesh2.musx;
+
+    %Add points to point cloud object, allows for cylinder check function
+    ptCloud = pointCloud(mesh.nodes);
 
     for i=1:num_blob
         blob=[];
@@ -74,7 +90,15 @@ for rep = 1:samples+1
         blob.z = blob_z(i);
         blob.r = blob_r(i);
         blob.muaf = blob_muaf(i);
-        mesh2 = add_blob(mesh2, blob);
+
+        %Cylinder position and rotation
+        rotationAngles = [rand*360, rand*360, rand*360];
+        translation = [-blob.x, -blob.y, -blob.z];
+        blob.tform = rigidtform3d(rotationAngles, translation);
+
+        blob.height = 5 + rand*45;
+
+        mesh2 = add_cylinder_fl(mesh2, blob, ptCloud);
     end
     mesh2.kappax = 1./(3*(mesh2.muax + mesh2.musx));
     mesh2.kappam = 1./(3*(mesh2.muam + mesh2.musm));
@@ -96,29 +120,25 @@ for rep = 1:samples+1
     all_y(1:num_blob,rep) = blob_y;
     all_z(1:num_blob,rep) = blob_z;
     all_fluctuate(:,rep) = fluctuate;
+    
+    threshold_fl = 0.005*max(data.amplitudefl);
+    threshold_xx = 0.005*max(data.amplitudex);
+    idx = ~(data.amplitudefl<threshold_fl | data.amplitudex<threshold_xx);
+    
+    %%%Calculate the regularisation strength
+    var_fl = sum(data.amplitudefl + noise_lv(1)*max(data.amplitudefl).*randn(size(data.amplitudefl)));
+    var_x = sum(data.amplitudex + noise_lv(2)*max(data.amplitudex).*randn(size(data.amplitudex)));
+    reg_strength = -3;
+    
+    recon_grid = tikhonov(J.complexm(idx,:)./data0.amplitudex(idx), 10^reg_strength, data.amplitudefl(idx)./data.amplitudex(idx));
+    
+    recon_grid = reshape(recon_grid, length(xgrid), length(ygrid), length(zgrid));
+    
+    noisy_img(:,:,:,rep) = recon_grid;
 end
-
-%% Prepare for NN
-xgrid = linspace(-65,65,48);
-ygrid = linspace(-65,65,48);
-zgrid = linspace(-75,75,56);
-mesh = gen_intmat(mesh, xgrid, ygrid, zgrid);
 
 all_muaf2 = mesh.vol.mesh2grid*all_muaf;
 clean_img = reshape(all_muaf2,48,48,56,samples);
-
-[J, data0]= jacobiangrid_fl(mesh,[],[],[],0,solver, opt);
-J = rmfield(J, 'completem');
-[~, invop] = tikhonov(J.complexm./data0.amplitudex,100);
-tmp = all_datafl_clean./all_datax_clean;
-maxamp = max(tmp);
-norm_noise = 0.02*rand(samples, 1);
-noisestd = maxamp' .* norm_noise;
-noise = abs(randn(size(tmp,1), samples)*diag(noisestd));
-% noise(noise<0) = 1e-20;
-
-recon = invop*(tmp + noise);
-noisy_img = reshape(recon,48,48,56,samples);
 
 inmesh = mesh.vol.gridinmesh;
 
@@ -133,6 +153,8 @@ end
 mask=zeros(48,48,56);
 mask(inmesh)=1;
 
-save('images3_blobs_testing', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','norm_noise','noise','mask', '-v7.3')
+save('images3_blobs_cylinder_max3', 'clean_img', 'noisy_img', 'inmesh','all_x', 'all_y', 'all_z', 'all_nblob', 'all_muaf', 'all_datafl', 'all_datax', 'all_noise', 'all_fluctuate', 'all_datax_clean', 'all_datafl_clean','mask', '-v7.3')
 clear
+
+
 
