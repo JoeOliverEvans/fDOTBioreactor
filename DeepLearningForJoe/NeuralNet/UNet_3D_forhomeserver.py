@@ -155,7 +155,7 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # data = sio.loadmat('../SimData/3D/images.mat')
-    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_blobs_max6.mat'
+    data_string = r'../SimulateData/Experiments/a_max3_vs_only3/images3_concat1.mat'
     print(data_string)
     data = mat73.loadmat(data_string)
     training_X = torch.tensor(data['noisy_img'][:, :, :, :2048], dtype=torch.float32)
@@ -195,9 +195,9 @@ if __name__ == '__main__':
     model.eval()
 
     path_root_string = r'../SimulateData/Experiments/a_max3_vs_only3/'
-    model_path = path_root_string + r'3D_UNet_trained3_max6'
+    model_path = path_root_string + r'3D_UNet_trained3_only1'
     torch.save(model, model_path)
-    sio.savemat(path_root_string + 'loss_3D_UNet3_max6.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
+    sio.savemat(path_root_string + 'loss_3D_UNet3_only1.mat', {'training_loss': all_loss, 'testing_loss': all_testloss})
 
     # %%
     # Now process the test set
@@ -208,5 +208,5 @@ if __name__ == '__main__':
         tmp = test_X[:, :, :, i]
         test_Y[:, :, :, i] = model(tmp.unsqueeze(0).unsqueeze(0)).squeeze().detach().numpy()
 
-    sio.savemat(path_root_string + r'test_processed_max6.mat', {'recon2': test_Y})
+    sio.savemat(path_root_string + r'test_processed_only1.mat', {'recon2': test_Y})
 
